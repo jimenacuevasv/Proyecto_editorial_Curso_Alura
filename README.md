@@ -1,2 +1,5 @@
-# Proyecto_editorial_Curso_Alura
-El objetivo principal Proyecto Editorial está basado en los servicios de Creación de Contenidos, Corrección de Estilo, Diseño y Marketing.de obras literarias.
+El objetivo principal de este proyecto es crear un plan de negocios basado en el desarrollo e implementación de una empresa de comunicaciones dedicada a la publicación literaria con la ayuda de correcciones profesionales de propuestas editoriales para escritores y empresas
+
+Con este proyecto deseamos aprovechar el aumento del 12% (2023) en la necesidad de personas que buscan autopublicar alguna obra literaria que suele ser un proceso difícil, técnico y engorroso para los autores que muchas veces caen en fallos de edición generando obras de mala calidad literaria. Adicionalmente es complejo dar a conocer la obra y publicitarla en lugares adecuados para generar las ventas deseadas.
+
+Durante el desarrollo del plan de negocios se consideraron los pasos mínimos necesarios para verificar la viabilidad del proyecto, dentro de los cuales destacan en la etapa previa para la elaboración del proyecto, el análisis del entorno, análisis de la industria, determinación de la demanda y planeamiento estratégico. En base a los resultados obtenidos mediante la Inteligencia Artificial pudimos identificar información primordial para crear un plan comercial y de marketing.
