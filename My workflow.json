@@ -1,0 +1,186 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "id": "c6f8f9ab-99b0-4e63-8b34-13c65d614b88",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "6393aa6f-de90-462a-a95b-0ac0b02c5706"
+    },
+    {
+      "parameters": {
+        "query": "={{ $json.chatInput }}",
+        "options": {
+          "max_results": 10,
+          "time_range": "year",
+          "include_raw_content": true
+        }
+      },
+      "id": "032d4cdb-07d5-4f92-ab55-6fc3a379b54d",
+      "name": "Search",
+      "type": "@tavily/n8n-nodes-tavily.tavily",
+      "typeVersion": 1,
+      "position": [
+        224,
+        0
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "tavilyApi": {
+          "id": "0HHpbOKrvU0CJrS2",
+          "name": "Tavily account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "results",
+        "options": {}
+      },
+      "id": "f89d863d-a7fa-42c4-97e1-a085361865b3",
+      "name": "Split Out",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres un agente que hace resúmenes de textos. Te enviaré una texto y quiero que hagas un resumen con los puntos más relevantes, sin añadir comentarios adicional. Solo devuelve el resumen.\n\nTexto:\n{{ $json.raw_content }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "b1a9996d-cefc-4168-985a-cb4861a06c90",
+      "name": "Message a model",
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        0
+      ],
+      "retryOnFail": false,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "executeOnce": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "I4zX1ix78dCvDUw8",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": []
+        },
+        "options": {}
+      },
+      "id": "8647487c-47f7-4800-9e10-c12af2f54d1f",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        928,
+        0
+      ]
+    }
+  ],
+  "pinData": {
+    "When chat message received": [
+      {
+        "json": {
+          "action": "sendMessage",
+          "sessionId": "cb7bab8eb64447dc8a203ac16281630f",
+          "chatInput": "¿Busca los libros infantiles más leídos en Chile?"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search": {
+      "main": [
+        [
+          {
+            "node": "Split Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "8713822c-cc25-40d6-b378-216727e79641",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9c2dd337537c5d8f7c54b7646c0c927272fe93ba833cb312f02e34eb6d0cb347"
+  },
+  "nodeGroups": [],
+  "id": "92Nih5FgxOjqtkmE",
+  "tags": []
+}
