@@ -14,6 +14,45 @@ Original file is located at
 # %pip install -U langchain-google-genai google-genai
 # %pip install langchain-core
 # %pip install langchain langchain-community
+# %pip install langchain-community pypdf
+# %pip install langchain-community pypdf langchain-openai langchain-chroma langgraph
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_chroma import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings # Import Gemini embeddings
+import os
+from google.colab import userdata
+
+# Assuming GOOGLE_API_KEY is already set from a previous cell (XGK2duujJm8-)
+# No need to set openai_api_key or os.environ["OPENAI_API_KEY"]
+
+loader = PyPDFLoader("resumen-ejecutivo_-resultados-principales-estudio.pdf")
+docs = loader.load()
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+splits = text_splitter.split_documents(docs)
+
+# Retrieve the API key from userdata
+api_key = userdata.get("Gemini_API_Key")
+
+# Use GoogleGenerativeAIEmbeddings with a specified model, trying 'embedding-001'
+vectorstore = Chroma.from_documents(documents=splits, embedding=GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-2", google_api_key=api_key))
+retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+
+import google.generativeai as genai
+from google.colab import userdata
+
+# Retrieve the API key from userdata
+api_key = userdata.get("Gemini_API_Key")
+
+# Configure genai with the API key
+genai.configure(api_key=api_key)
+
+print("Available models that support embedContent:")
+for m in genai.list_models():
+    if "embedContent" in m.supported_generation_methods:
+        print(f"- {m.name}")
 
 import os
 import google.generativeai as genai
@@ -57,19 +96,18 @@ from google.colab import userdata
 if "TAVILY_API_KEY" not in os.environ:
     os.environ["TAVILY_API_KEY"] = userdata.get("tavily")
 
+from langchain_core.tools import tool
+
 @tool
-def busca_web(query: str) -> list:
-  """Realiza una busqueda en la web el ranking de libros infantiles mas leídos"""
+def buscar_en_pdf(query: str) -> str:
+    """Busca información específica sobre editoriales, regiones y contenido relevante dentro del PDF cargado."""
+    docs = retriever.invoke(query)
+    if not docs:
+        return "No se encontró información relevante en el documento."
 
-  tavily_search = TavilySearchResults(
-      max_results=10,
-      search_depth="advanced",
-      max_tokens=1000 # Aumentado de 10 a 1000 para obtener contenido más completo
-  )
-  resultado_busca = tavily_search.invoke(query)
-  return resultado_busca
+    return "\n\n".join([doc.page_content for doc in docs])
 
-tools = [busca_web]
+tools = [buscar_en_pdf]
 
 # This line ensures llm_con_herramienta is bound to the updated llm.
 llm_con_herramienta = llm.bind(tools=tools)
@@ -105,17 +143,50 @@ from langchain_core.output_parsers import StrOutputParser
 
 from langgraph.graph import START, StateGraph, END
 
+from typing import Annotated, TypedDict
+from langchain_core.messages import BaseMessage
+from langgraph.graph import StateGraph, START, END
+from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
+
+# 1. Definir el Estado
+class State(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+
+# 2. Conectar el Tool al LLM
+# llm is already defined as ChatGoogleGenerativeAI in a previous cell.
+llm_with_tools = llm.bind_tools(tools)
+
+# 3. Definir nodo del Asistente
+def chatbot(state: State):
+    return {"messages": [llm_with_tools.invoke(state["messages"])]}
+
+# 4. Crear el Grafo
+graph_builder = StateGraph(State)
+
+graph_builder.add_node("chatbot", chatbot)
+graph_builder.add_node("tools", ToolNode(tools))
+
+# Flujo condicional: Si el LLM decide usar un tool, va a 'tools', de lo contrario termina
+graph_builder.add_edge(START, "chatbot")
+graph_builder.add_conditional_edges("chatbot", tools_condition)
+graph_builder.add_edge("tools", "chatbot")
+
+app = graph_builder.compile()
+
 from typing import TypedDict, Annotated, List, Optional
 import operator
-from langchain_core.messages import BaseMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
+from langgraph.graph import StateGraph
 
-
+# AgentState definition
 class AgentState(TypedDict):
     chat_history: List[BaseMessage]
     messages: Annotated[List[BaseMessage], operator.add]
     web_answer: Optional[str]
     scientific_answer: Optional[str]
     final_answer: Optional[str]
+    router_decision: Optional[str]
 
 workflow = StateGraph(AgentState)
 
@@ -147,7 +218,7 @@ if "TAVILY_API_KEY" not in os.environ:
 
 @tool
 def busca_web(query: str) -> list:
-  """Realiza una busqueda en la web el ranking de libros infantiles mas leídos"""
+  """Realiza una busqueda en la web Formatos de libros editoriales en Chile"""
 
   tavily_search = TavilySearchResults(
       max_results=10,
@@ -254,7 +325,16 @@ Image(app.get_graph().draw_mermaid_png())
 
 from langchain_core.messages import HumanMessage
 
-resultado = app.invoke({"messages": [HumanMessage(content="Cuál es el impacto de la lectura en los niños")]})
+resultado = app.invoke({"messages": [HumanMessage(content="Cuántos títulos se publicaron")]})
+
+from langchain_core.messages import HumanMessage
+
+resultado = app.invoke({
+    "messages": [HumanMessage(content="¿Cuál es la distribución de editoriales por regiones según el documento?")]
+})
+
+# Imprimir la última respuesta generada por el asistente
+print(resultado["messages"][-1].content)
 
 print(resultado["web_answer"])
 
@@ -309,7 +389,7 @@ Image(app.get_graph().draw_mermaid_png())
 
 from langchain_core.messages import HumanMessage
 
-resultado = app.invoke({"messages": [HumanMessage(content="Cuál es el impacto de la lectura en los niños")]})
+resultado = app.invoke({"messages": [HumanMessage(content="´¿Que editoriales participaron en ferias?")]})
 print(resultado["final_answer"])
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -372,12 +452,12 @@ Image(app.get_graph().draw_mermaid_png())
 from langchain_core.messages import HumanMessage
 
 resultado = app.invoke({
-    "messages": [HumanMessage(content="Consejos prácticos para fomentar la lectura en los niños. Usa sólo fuentes web")]
+    "messages": [HumanMessage(content="Cuál es la distribución de editoriales por regiones. Usa sólo fuentes web")]
 })
 print(resultado["final_answer"])
 
 resultado = app.invoke({
-    "messages": [HumanMessage(content="Consejos prácticos para fomentar la lectura en los niños. Usa sólo fuentes cientificas")]
+    "messages": [HumanMessage(content="Cuál es la distribución de editoriales por regiones. Usa sólo fuentes cientificas")]
 })
 print(resultado["final_answer"])
 
