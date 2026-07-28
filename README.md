@@ -7,3 +7,4 @@ Durante el desarrollo del plan de negocios se consideraron los pasos mínimos ne
 <img width="397" height="601" alt="image" src="https://github.com/user-attachments/assets/1d1f5fa7-4948-419b-982d-105dbfe9d340" />
 
 <img width="1895" height="1015" alt="image" src="https://github.com/user-attachments/assets/2e0c012b-6ffe-40f5-b464-795a1aa5d535" />
+<img width="1915" height="866" alt="image" src="https://github.com/user-attachments/assets/e59e29d9-9a12-49f0-b946-c9c87c786d92" />
